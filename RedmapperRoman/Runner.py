@@ -160,7 +160,7 @@ class BaseRunner:
         
         #outpath should be whatever format is utilized in RomanCollator
         
-        Collator = utils.RomanCollator(self.outBase, n_jobs = n_jobs, nside = self.nside_split)
+        Collator = utils.RomanCollator(self.outBase, n_jobs = n_jobs, nside = self.nside_split, bands = self.bands)
         Collator.run(self.input_catalog_hdf5)
 
 
