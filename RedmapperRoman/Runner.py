@@ -410,6 +410,7 @@ class BaseRunner:
         # b_array  = np.array([3.27e-12, 4.83e-12, 6.0e-12, 9.0e-12])
         b_array  = np.array([1.4e-12, 9.0e-13, 1.2e-12, 1.8e-12, 7.4e-12,7.4e-12,7.4e-12,7.4e-12,7.4e-12,7.4e-12])
         bscale   = np.array(b_array) * 10.**(zp / 2.5)
+        refbands = ['U', 'G', 'R', 'I', 'Z', 'Y', 'F106', 'F129', 'F158', 'F184']
 
         bands    = self.bands
         nmag     = len(bands)
@@ -430,7 +431,7 @@ class BaseRunner:
         info_dict['NMAG']    = nmag
         info_dict['MODE']    = self.survey.upper() # currently SDSS, DES, or LSST
         info_dict['ZP']      = zp
-        info_dict['B']       = np.array([b_array[bands.index(b)] for b in self.bands]) # if magnitudes are actually luptitudes
+        info_dict['B']       = np.array([b_array[refbands.index(b.upper())] for b in self.bands]) # if magnitudes are actually luptitudes
 
         for b, i in zip(self.bands, self.bands_inds):
             info_dict[f'{b}_IND'] = i
@@ -459,11 +460,13 @@ class BaseRunner:
 
             for i, band in enumerate(bands):
 
+                b_i     = refbands.index(band.upper())
+
                 flux    = fflux['flux_%s' % (band.lower())].astype(np.float64)
                 fluxerr = fflux['fluxerr_%s' % (band.lower())].astype(np.float64)
 
-                galaxies['mag'][:, i]     = 2.5 * np.log10(1.0 / b_array[i]) - np.arcsinh(0.5 * flux / bscale[i]) / (0.4 * np.log(10.0))
-                galaxies['mag_err'][:, i] = 2.5 * fluxerr / (2.0 * bscale[i] * np.log(10.0) * np.sqrt(1.0 + (0.5 * flux / bscale[i])**2.))
+                galaxies['mag'][:, i]     = 2.5 * np.log10(1.0 / b_array[b_i]) - np.arcsinh(0.5 * flux / bscale[b_i]) / (0.4 * np.log(10.0))
+                galaxies['mag_err'][:, i] = 2.5 * fluxerr / (2.0 * bscale[b_i] * np.log(10.0) * np.sqrt(1.0 + (0.5 * flux / bscale[b_i])**2.))
 
 
             galaxies['refmag']     = galaxies['mag'][:, ref_ind]
