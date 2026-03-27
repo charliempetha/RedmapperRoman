@@ -9,5 +9,7 @@ python -u -m RedmapperRoman.Runner \
 		--fracdet_map /project/chihway/dhayaa/Roman/Cardinal/MockRun/Masks/footprint_mask.hpy \
 		--foreground_map /project/chihway/dhayaa/Roman/Cardinal/MockRun/Masks/foreground_mask.hpy \
 		--SPmap_path /project/chihway/dhayaa/Roman/Cardinal/MockRun/SPmaps/MAP \
-		--n_jobs 28 --refband F184
+		--n_jobs 28 --refband F184 \
+		--color_presel_thresh 0.2,0.2,0.2,0.2 \
+		--z_range 0.1,0.95
 

@@ -36,7 +36,8 @@ class BaseRunner:
                  refband = 'F184',
                  n_jobs = 32, nside_split = 32,
                  Nrandoms = 1_000_000,
-                 z_range  = [0.1, 0.95]):
+                 z_range  = [0.1, 0.95],
+                 color_presel_thresh = [0.2]*9):
         
         """
         Initialize the Redmapper pipeline
@@ -111,6 +112,12 @@ class BaseRunner:
 
         z_range : list, optional
             The minimum and maximum redshift to consider for the cluster candidate.
+
+        color_presel_thresh: list, optional
+            The threshold in, abs(mag_obs - model) < thresh, that is used to preselect
+            red-ish galaxies to send to redmapper in the first place. It has dimensions
+            of 1 - Nbands, and is organized as [m1 - m2, m2 - m3, ....] where mi is a
+            mag in a band in the same order passed in the bands input.
         """
         
         self.outBase    = outBase
@@ -133,6 +140,7 @@ class BaseRunner:
         self.SPmap_path         = SPmap_path
         self.SPmap_names        = SPmap_names
         self.nside_split        = nside_split
+        self.color_presel_thresh= color_presel_thresh
 
         if self.calib_dir != None:
             if self.calib_dir[-1] == '/':
@@ -527,9 +535,9 @@ class BaseRunner:
         assert np.all(np.diff(np.array(self.bands_inds)) == 1), \
             "Input bands are offset by more than 1 filter. You need to use a new file for this analysis....Ping Dhayaa"
 
-        THRESH = 0.2
         QAcut  = True
         for i in range(len(self.bands) - 1):
+            THRESH= self.color_presel_thresh[i]
             data  = galmag[:, i] - galmag[:, i + 1]
             model = np.interp(allspec['z'][use], MODEL['Z'], MODEL['COLOR'][:, self.bands_inds[i]])
             QAcut = QAcut & (np.abs(model - data) <= THRESH)
@@ -538,6 +546,7 @@ class BaseRunner:
 
         plt.close()
         for i in range(len(self.bands) - 1):
+            THRESH= self.color_presel_thresh[i]
             plt.hexbin(allspec['z'][use], (galmag[:, i] - galmag[:, i + 1])[use], extent=[0, 1, 0.0, 2.5], bins='log')
             plt.xlabel('z'); plt.ylabel(f'{self.bands[i]} - {self.bands[i + 1]}')
             plt.plot(MODEL['Z'], MODEL['COLOR'][:, self.bands_inds[i]], 'b-')
@@ -1171,6 +1180,8 @@ if __name__ == '__main__':
     parser.add_argument("--bands",              action='store', type=str, default = "U,G,R,I,Z,Y,F106,F129,F158,F184")
     parser.add_argument("--bands_inds",         action='store', type=str, default = "0,1,2,3,4,5,6,7,8,9")
     parser.add_argument("--refband",            action='store', type=str, default = 'F184')
+    parser.add_argument("--color_presel_thresh",action='store', type=str, default = '0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2')
+    parser.add_argument("--z_range",            action='store', type=str, default = '0.1,0.95')
 
 
     args = vars(parser.parse_args())
@@ -1186,6 +1197,7 @@ if __name__ == '__main__':
            bands_inds = [int(b) for b in args['bands_inds'].split(',')],
            refband    = args['refband'],
            survey     = args['survey'],
+           z_range    = args['z_range'].split(','),
            
            input_catalog_hdf5 = args['input_catalog_hdf5'],
            input_specz        = args['input_specz'],
@@ -1196,4 +1208,6 @@ if __name__ == '__main__':
            
            n_jobs     = args['n_jobs'],
            seed       = args['seed'],
+
+           color_presel_thresh = args['color_presel_thresh'].split(',')
            ).go()
