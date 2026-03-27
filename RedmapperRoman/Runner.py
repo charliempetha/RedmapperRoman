@@ -1197,7 +1197,7 @@ if __name__ == '__main__':
            bands_inds = [int(b) for b in args['bands_inds'].split(',')],
            refband    = args['refband'],
            survey     = args['survey'],
-           z_range    = args['z_range'].split(','),
+           z_range    = [float(z) for z in args['z_range'].split(',')],
            
            input_catalog_hdf5 = args['input_catalog_hdf5'],
            input_specz        = args['input_specz'],
@@ -1209,5 +1209,5 @@ if __name__ == '__main__':
            n_jobs     = args['n_jobs'],
            seed       = args['seed'],
 
-           color_presel_thresh = args['color_presel_thresh'].split(',')
+           color_presel_thresh = [float(c) for c in args['color_presel_thresh'].split(',')]
            ).go()
