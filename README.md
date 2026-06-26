@@ -15,7 +15,7 @@ This repo is designed to contain all necessary pieces for running Redmapper. As 
 
 1. Clone Dhayaa's modified version of redmapper `git clone https://github.com/DhayaaAnbajagane/redmapper.git` and install it as `cd redmapper; pip install .`. The setup.py approach won't work here (even though the file exists)
 2. Clone this repo locally `git clone https://github.com/Roman-HLIS-Cosmology-PIT/RedmapperRoman.git`.
-3. Next we will install `elidestools` as a standalone package. `cd RedmapperRoman/elidestools; python setup.py install`. This will install the package into your environment.
+3. Next we will install `elidestools` as a standalone package. `cd RedmapperRoman/elidestools; python setup.py install`. This will install the package into your environment.   
 
 That is everything you need to install! The rest of the code can be run by simple imports of the relevant functions/classes. I run this by calling the module from the cmdline. So as `PYTHONPATH={PATH_TO_RedmapperRoman repo} python -u -m RedmapperRoman.Runner.py {FLAGS}`. Running it in module mode helps with consistent importing of other modules (which are defined as relative imports).
 
@@ -71,6 +71,8 @@ The job broadly takes me about 24 hours on a 28 processes, for the Cardinal run.
 `bands_inds`: What are the indices of the bands. It is best to just use 0,1,2,3,4,...,Nbands.
 
 `refband` : Redmapper uses one band to compute the effective completeness, volume-limit of the data. It's best to pick a band that is sufficiently precise for characterizing objects across many redshifts.
+
+`config_override` : Path to a yaml file that contains the parameter values you want to override (relative to the defaults). This file should have the same structure as the redmapper configs from Eli: https://github.com/DhayaaAnbajagane/redmapper/blob/main/how-to/cal_example.yml. We use the params in your override file, look for the params in the run's config and override them. So naming consistency is critical.
 
 
 ## Python runner arguments

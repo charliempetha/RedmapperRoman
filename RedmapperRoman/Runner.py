@@ -37,7 +37,8 @@ class BaseRunner:
                  n_jobs = 32, nside_split = 32,
                  Nrandoms = 1_000_000,
                  z_range  = [0.1, 0.95],
-                 color_presel_thresh = [0.2]*9):
+                 color_presel_thresh = [0.2]*9,
+                 config_override = None):
         
         """
         Initialize the Redmapper pipeline
@@ -118,6 +119,12 @@ class BaseRunner:
             red-ish galaxies to send to redmapper in the first place. It has dimensions
             of 1 - Nbands, and is organized as [m1 - m2, m2 - m3, ....] where mi is a
             mag in a band in the same order passed in the bands input.
+
+        config_override: path/str, optional
+            A path to the config.yaml file that tells us updated values for any
+            params in the default redmapper config from Eli. If you want to update
+            a value, make sure you use the same naming format as Eli's default configs:
+            https://github.com/DhayaaAnbajagane/redmapper/blob/main/how-to/cal_example.yml
         """
         
         self.outBase    = outBase
@@ -133,19 +140,22 @@ class BaseRunner:
         self.z_range    = z_range
         
 
-        self.input_catalog_hdf5 = input_catalog_hdf5
-        self.input_specz        = input_specz
-        self.fracdet_map        = fracdet_map
-        self.foreground_map     = foreground_map
-        self.SPmap_path         = SPmap_path
-        self.SPmap_names        = SPmap_names
-        self.nside_split        = nside_split
-        self.color_presel_thresh= color_presel_thresh
+        self.input_catalog_hdf5   = input_catalog_hdf5
+        self.input_specz          = input_specz
+        self.fracdet_map          = fracdet_map
+        self.foreground_map       = foreground_map
+        self.SPmap_path           = SPmap_path
+        self.SPmap_names          = SPmap_names
+        self.nside_split          = nside_split
+        self.color_presel_thresh  = color_presel_thresh
+        self.config_override      = config_override
 
         if self.calib_dir != None:
             if self.calib_dir[-1] == '/':
                 self.calib_dir = self.calib_dir[:-1]
                 print("Removing backspace from calib_dir")
+
+                
 
     @timeit
     def go(self):
@@ -259,7 +269,7 @@ class BaseRunner:
         if os.path.isfile(path):
             print("FRACMAPS EXIST. SKIPPING..")
         else:
-            print("NO MAP AT", path)
+            print("MAPS FOR FINAL BAND IS MISSING, REMAKING THEM ALL TO BE SAFE....")
             NSIDE    = self.get_NSIDE()
             FRACGOOD = hsp.HealSparseMap.read(self.outBase + '.roman_pixmask.hs')
             FRACGOOD = FRACGOOD.fracdet_map(nside=NSIDE)
@@ -579,10 +589,6 @@ class BaseRunner:
 
     @timeit
     def make_config_yaml(self):
-
-        # if os.path.isfile(self.outBase + '_config.yaml'):
-        #     print("CONFIG ALREADY EXISTS. SKIPPING...")
-        #     return None
         
         hpix_choice = self.make_calibration_hpix()
 
@@ -871,6 +877,82 @@ class BaseRunner:
         with open(self.outBase + '_config.yaml', 'w') as f:
             f.write(textwrap.dedent(CONFIG))
 
+
+        #Parameters that should not be updated by external user as
+        #they are all set internall for a given run using data
+        #the user provided at the very start.
+        WARN_PARS = [
+            'outpath',
+            'galfile',
+            'redgalfile',
+            'redgalmodelfile',
+            'plotpath',
+            'hpix',
+            'nside',
+            'refmag',
+            'zrange',
+            'specfile',
+            'specfile_train',
+            'mstar_survey',
+            'mstar_band',
+            'maskfile',
+            'depthfile',
+            'calib_nproc',
+            'calib_run_nproc',
+            'calib_redgal_template',
+        ]
+
+        if self.config_override is not None:
+            assert isinstance(self.config_override, str), f"Config must be a string path, you passed {self.config_override}"
+            self._update_yaml(self.outBase + '_config.yaml', self.config_override, warn_on = WARN_PARS)
+
+
+    def _update_yaml(self, current_cfg, updated_cfg, warn_on=None):
+        """
+        Update current_cfg in place using entries from updated_cfg.
+
+        warn_on can contain either leaf names:
+            {"catfile", "zredfile"}
+
+        or full dotted paths:
+            {"paths.catfile", "calib.zredfile"}
+        """
+        warn_on = set(warn_on or [])
+
+        with open(current_cfg, "r") as f:
+            current = yaml.safe_load(f)
+
+        with open(updated_cfg, "r") as f:
+            updated = yaml.safe_load(f)
+
+        def merge(current, updated, prefix=""):
+            for k, v in updated.items():
+                name = f"{prefix}.{k}" if prefix else str(k)
+
+                if isinstance(v, dict) and isinstance(current.get(k), dict):
+                    merge(current[k], v, name)
+                else:
+                    old = current.get(k, "<MISSING>")
+
+                    if old != v:
+                        print(f"{name}: {old} -> {v}")
+
+                        if name in warn_on or str(k) in warn_on:
+                            print("\n" + "!" * 90)
+                            print(f"WARNING: OVERRIDING PARAM [{name}] THAT IS SELF-CONSISTENTLY SET IN REDMAPPER")
+                            print(f"DOUBLE-CHECK THAT YOU REALLY WANT TO OVERRIDE IT")
+                            print(f"OLD: {old}")
+                            print(f"NEW: {v}")
+                            print("!" * 90 + "\n")
+
+                    current[k] = v
+
+        merge(current, updated)
+
+        with open(current_cfg, "w") as f:
+            yaml.safe_dump(current, f, sort_keys=False)
+        
+            
     @timeit
     def run_redmapper_calibration(self):
 
@@ -1173,6 +1255,7 @@ if __name__ == '__main__':
     parser.add_argument("--SPmap_path",         action='store', type=str, required=True)
     parser.add_argument("--n_jobs",             action='store', type=int, required=True)
     parser.add_argument("--survey",             action='store', type=str, required=True)
+    parser.add_argument("--config_override",    action='store', type=str, required=False, default = None)
 
     parser.add_argument("--SPmap_names",        action='store', type=str, default = "maglim,fwhm,airmass,exptime,skybrite")
     parser.add_argument("--seed",               action='store', type=int, default = 42)
@@ -1205,6 +1288,7 @@ if __name__ == '__main__':
            foreground_map     = args['foreground_map'],
            SPmap_path         = args['SPmap_path'],
            SPmap_names        = args['SPmap_names'].split(','),
+           config_override    = args['config_override'],
            
            n_jobs     = args['n_jobs'],
            seed       = args['seed'],
