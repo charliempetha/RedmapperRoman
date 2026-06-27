@@ -38,7 +38,8 @@ class BaseRunner:
                  Nrandoms = 1_000_000,
                  z_range  = [0.1, 0.95],
                  color_presel_thresh = [0.2]*9,
-                 config_override = None):
+                 config_override = None,
+                 zeropoint = 22.5):
         
         """
         Initialize the Redmapper pipeline
@@ -125,6 +126,10 @@ class BaseRunner:
             params in the default redmapper config from Eli. If you want to update
             a value, make sure you use the same naming format as Eli's default configs:
             https://github.com/DhayaaAnbajagane/redmapper/blob/main/how-to/cal_example.yml
+
+        zeropoint: float, optional
+            The zeropoint of the fluxes in the flux-2-mag conversion. Defaults to 22.5
+            based on Chun-Hao To's definitions for Roman.
         """
         
         self.outBase    = outBase
@@ -149,6 +154,7 @@ class BaseRunner:
         self.nside_split          = nside_split
         self.color_presel_thresh  = color_presel_thresh
         self.config_override      = config_override
+        self.zp                   = zeropoint
 
         if self.calib_dir != None:
             if self.calib_dir[-1] == '/':
@@ -160,18 +166,20 @@ class BaseRunner:
     @timeit
     def go(self):
 
-        self.prep_training_catalog(n_jobs = self.n_jobs)
-        self.make_all_maps()
-        self.make_master_galaxy_catalog()
-        self.make_spec_catalog_redseq()
         self.make_config_yaml()
-        self.run_redmapper_calibration()
-        self.run_zred_pixel()
-        self.run_zred_bkg()
-        self.run_redmapper_pixel()
-        self.consolidate_redmapper_pixel()
-        self.make_randoms()
-        self.make_redmagic()
+
+        # self.prep_training_catalog(n_jobs = self.n_jobs)
+        # self.make_all_maps()
+        # self.make_master_galaxy_catalog()
+        # self.make_spec_catalog_redseq()
+        # self.make_config_yaml()
+        # self.run_redmapper_calibration()
+        # self.run_zred_pixel()
+        # self.run_zred_bkg()
+        # self.run_redmapper_pixel()
+        # self.consolidate_redmapper_pixel()
+        # self.make_randoms()
+        # self.make_redmagic()
         
     @timeit
     def prep_training_catalog(self, n_jobs):
@@ -301,7 +309,7 @@ class BaseRunner:
         if os.path.isfile(path.replace('_flux.', '.')):
             print(f"PATH {path} EXISTS. SKIPPING PROCESS STEP....", flush = True)
         
-        etools.des_depth.catalogPixelProcess(path, self.outBase, 'flux', 'flux', 'fluxerr', 1024, zp = 22.5,
+        etools.des_depth.catalogPixelProcess(path, self.outBase, 'flux', 'flux', 'fluxerr', 1024, zp = self.zp,
                                              nSidePixFile = self.nside_split, bandList = self.bands, noGoldFlags = True, 
                                              s2nCut = 5, selectGalaxies = True, bdSizeFileType = None, nTrial = 3)
 
@@ -349,7 +357,7 @@ class BaseRunner:
         if os.path.isfile(self.outBase + f'-10{self.bands[-1]}_flux_depthstr.hs'):
             pass
         else:
-            zp      = 22.5 #For all eternity in Roman....
+            zp      = self.zp
 
             hsmask  = hsp.HealSparseMap.read(self.outBase + '.roman_pixmask.hs')
             
@@ -386,7 +394,7 @@ class BaseRunner:
 
                 hdr = {}
                 hdr['NSIG']  = 10.0
-                hdr['ZP']    = zp
+                hdr['ZP']    = self.zp
                 hdr['NBAND'] = 1
                 hdr['W']     = 0.0  # wall mode
                 hdr['EFF']   = 1.0
@@ -422,7 +430,7 @@ class BaseRunner:
 
         print('limmag_max = ', limmag_max)
 
-        zp       = 22.5
+        zp       = self.zp
         errrange =[0.0, 100.0]
 
         # b_array  = np.array([3.27e-12, 4.83e-12, 6.0e-12, 9.0e-12])
@@ -919,6 +927,14 @@ class BaseRunner:
         """
         warn_on = set(warn_on or [])
 
+        class FlowListDumper(yaml.SafeDumper):
+            pass
+
+        def _repr_list_flow(dumper, data):
+            return dumper.represent_sequence("tag:yaml.org,2002:seq", data, flow_style=True)
+
+        FlowListDumper.add_representer(list, _repr_list_flow)
+
         with open(current_cfg, "r") as f:
             current = yaml.safe_load(f)
 
@@ -950,7 +966,7 @@ class BaseRunner:
         merge(current, updated)
 
         with open(current_cfg, "w") as f:
-            yaml.safe_dump(current, f, sort_keys=False)
+            yaml.dump(current, f, Dumper=FlowListDumper, sort_keys=False)
         
             
     @timeit
@@ -1265,6 +1281,7 @@ if __name__ == '__main__':
     parser.add_argument("--refband",            action='store', type=str, default = 'F184')
     parser.add_argument("--color_presel_thresh",action='store', type=str, default = '0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2')
     parser.add_argument("--z_range",            action='store', type=str, default = '0.1,0.95')
+    parser.add_argument("--zeropoint",          action='store', type=str, default = '22.5')
 
 
     args = vars(parser.parse_args())
@@ -1281,6 +1298,7 @@ if __name__ == '__main__':
            refband    = args['refband'],
            survey     = args['survey'],
            z_range    = [float(z) for z in args['z_range'].split(',')],
+           zeropoint  = float(args['zeropoint']),
            
            input_catalog_hdf5 = args['input_catalog_hdf5'],
            input_specz        = args['input_specz'],
