@@ -166,20 +166,18 @@ class BaseRunner:
     @timeit
     def go(self):
 
+        self.prep_training_catalog(n_jobs = self.n_jobs)
+        self.make_all_maps()
+        self.make_master_galaxy_catalog()
+        self.make_spec_catalog_redseq()
         self.make_config_yaml()
-
-        # self.prep_training_catalog(n_jobs = self.n_jobs)
-        # self.make_all_maps()
-        # self.make_master_galaxy_catalog()
-        # self.make_spec_catalog_redseq()
-        # self.make_config_yaml()
-        # self.run_redmapper_calibration()
-        # self.run_zred_pixel()
-        # self.run_zred_bkg()
-        # self.run_redmapper_pixel()
-        # self.consolidate_redmapper_pixel()
-        # self.make_randoms()
-        # self.make_redmagic()
+        self.run_redmapper_calibration()
+        self.run_zred_pixel()
+        self.run_zred_bkg()
+        self.run_redmapper_pixel()
+        self.consolidate_redmapper_pixel()
+        self.make_randoms()
+        self.make_redmagic()
         
     @timeit
     def prep_training_catalog(self, n_jobs):
