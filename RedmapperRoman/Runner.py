@@ -458,7 +458,7 @@ class BaseRunner:
         info_dict['B']       = np.array([b_array[refbands.index(b.upper())] for b in self.bands]) # if magnitudes are actually luptitudes
 
         for b, i in zip(self.bands, self.bands_inds):
-            info_dict[f'{b}_IND'] = i
+            info_dict[f'{b.upper()}_IND'] = i
     
         widefiles = sorted(glob.glob('%s_pix*_basic.fits' % (widebase)))
         maker     = redmapper.GalaxyCatalogMaker(outbase, info_dict)
