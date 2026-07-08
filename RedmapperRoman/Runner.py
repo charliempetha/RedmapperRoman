@@ -967,6 +967,12 @@ class BaseRunner:
             yaml.dump(current, f, Dumper=FlowListDumper, sort_keys=False)
         
             
+    def _get_outbase_name(self):
+        with open(self.outBase + '_config.yaml', "r") as f:
+            current = yaml.safe_load(f)
+            return current['outbase']
+    
+            
     @timeit
     def run_redmapper_calibration(self):
 
@@ -974,12 +980,19 @@ class BaseRunner:
             calib = redmapper.calibration.RedmapperCalibrator(self.outBase + '_config.yaml')
             calib.run()
         else:
-            shutil.copy(self.calib_dir + '_run/my_roman_run_bkg.fit',         os.path.dirname(self.outBase) + '_run/my_roman_run_bkg.fit')
-            shutil.copy(self.calib_dir + '/my_roman_bkg_color.fit',           os.path.dirname(self.outBase) + '/my_roman_bkg_color.fit')
-            shutil.copy(self.calib_dir + '/my_roman_iter3_pars.fit',          os.path.dirname(self.outBase) + '/my_roman_iter3_pars.fit') 
-            shutil.copy(self.calib_dir + '/my_roman_zspec_redgals_model.fit', os.path.dirname(self.outBase) + '/my_roman_zspec_redgals_model.fit') 
-            shutil.copy(self.calib_dir + '/my_roman_iter3_wcen.fit',          os.path.dirname(self.outBase) + '/my_roman_iter3_wcen.fit') 
-            shutil.copy(self.calib_dir + '/my_roman_iter3_zlambda.fit',       os.path.dirname(self.outBase) + '/my_roman_iter3_zlambda.fit') 
+            obase = self._get_outbase_name()
+            shutil.copy(self.calib_dir + f'_run/{obase}_run_bkg.fit',         
+                        os.path.dirname(self.outBase) + f'_run/{obase}_run_bkg.fit')
+            shutil.copy(self.calib_dir + f'/{obase}_bkg_color.fit',           
+                        os.path.dirname(self.outBase) + f'/{obase}_bkg_color.fit')
+            shutil.copy(self.calib_dir + f'/{obase}_iter3_pars.fit',          
+                        os.path.dirname(self.outBase) + f'/{obase}_iter3_pars.fit') 
+            shutil.copy(self.calib_dir + f'/{obase}_zspec_redgals_model.fit', 
+                        os.path.dirname(self.outBase) + f'/{obase}_zspec_redgals_model.fit') 
+            shutil.copy(self.calib_dir + f'/{obase}_iter3_wcen.fit',          
+                        os.path.dirname(self.outBase) + f'/{obase}_iter3_wcen.fit') 
+            shutil.copy(self.calib_dir + f'/{obase}_iter3_zlambda.fit',       
+                        os.path.dirname(self.outBase) + f'/{obase}_iter3_zlambda.fit') 
             print("COPIED REDMAPPER CALIBRATION OVER FROM", self.calib_dir)
 
     @timeit
@@ -1052,7 +1065,8 @@ class BaseRunner:
     
     def _single_step_run_redmapper_pixel(self, pix):
 
-        if os.path.isfile(os.path.dirname(self.outBase) + f'/my_roman_run_{self.nside_split}_{pix:05d}_final_catalog.fit'):
+        obase = self._get_outbase_name()
+        if os.path.isfile(os.path.dirname(self.outBase) + f'/{obase}_run_{self.nside_split}_{pix:05d}_final_catalog.fit'):
             print("HPIX RUN EXISTS. SKIPPING.....")
             return None
         
@@ -1064,7 +1078,8 @@ class BaseRunner:
     @timeit
     def consolidate_redmapper_pixel(self):
 
-        if os.path.isfile(os.path.dirname(self.outBase) + f"/my_roman_run_redmapper_v{rm_version}_lgt05_vl02_catalog.fit"):
+        obase = self._get_outbase_name()
+        if os.path.isfile(os.path.dirname(self.outBase) + f"/{obase}_run_redmapper_v{rm_version}_lgt05_vl02_catalog.fit"):
             print("FILE EXISTS. SKIPPING.....")
             return None
         
@@ -1086,7 +1101,8 @@ class BaseRunner:
     @timeit
     def setup_random_run(self, config_path):
 
-        if os.path.isfile(os.path.dirname(self.outBase) + f"/zmask02/my_roman_run_redmapper_{rm_version}_vl02_vlim_zmask.fit"):
+        obase = self._get_outbase_name()
+        if os.path.isfile(os.path.dirname(self.outBase) + f"/zmask02/{obase}_run_redmapper_{rm_version}_vl02_vlim_zmask.fit"):
             print("FILES EXIST. SKIPPING....")
             return None
         
@@ -1099,21 +1115,22 @@ class BaseRunner:
         #Rewrite lines in config
         path = pathlib.Path(rand_config)
         data = yaml.safe_load(path.read_text())
-        data["catfile"]  = os.path.dirname(self.outBase) + f"/my_roman_run_redmapper_v{rm_version}_lgt05_vl02_catalog.fit"
-        data["randfile"] = os.path.dirname(self.outBase) + "/zmask02/my_roman_randoms_master_table.fit"
+        data["catfile"]  = os.path.dirname(self.outBase) + f"/{obase}_run_redmapper_v{rm_version}_lgt05_vl02_catalog.fit"
+        data["randfile"] = os.path.dirname(self.outBase) + f"/zmask02/{obase}_randoms_master_table.fit"
         path.write_text(yaml.safe_dump(data, sort_keys=False))
 
         config = redmapper.Configuration(rand_config)
 
         #Move zmask file over
-        shutil.copy(os.path.dirname(self.outBase) + f"/my_roman_run_redmapper_v{rm_version}_vl02_vlim_zmask.fit", 
+        shutil.copy(os.path.dirname(self.outBase) + f"/{obase}_run_redmapper_v{rm_version}_vl02_vlim_zmask.fit", 
                     os.path.dirname(self.outBase) + "/zmask02/")
 
 
     @timeit
     def generate_randoms(self, config):
 
-        if os.path.isfile(os.path.dirname(self.outBase) + "/zmask02/my_roman_randoms_master_table.fit"):
+        obase = self._get_outbase_name()
+        if os.path.isfile(os.path.dirname(self.outBase) + f"/zmask02/{obase}_randoms_master_table.fit"):
             print("FILES EXIST. SKIPPING....")
             return None
         
@@ -1137,7 +1154,8 @@ class BaseRunner:
         jobs = [joblib.delayed(self._single_step_run_zmask_pixel)(p, config) for p in pixlist]
         out  = joblib.Parallel(n_jobs = n_jobs, verbose = 10)(jobs)
 
-        if os.path.isfile(os.path.dirname(self.outBase) + f'/my_roman_run_redmapper_v{rm_version}_randoms_zmask_catalog.fit'):
+        obase = self._get_outbase_name()
+        if os.path.isfile(os.path.dirname(self.outBase) + f'/{obase}_run_redmapper_v{rm_version}_randoms_zmask_catalog.fit'):
             print("Consolidated file exists. Skipping.....")
             return None
 
@@ -1147,7 +1165,8 @@ class BaseRunner:
     
     def _single_step_run_zmask_pixel(self, pix, config):
 
-        if os.path.isfile(os.path.dirname(self.outBase) + f'/my_roman_run_{self.nside_split}_{pix:05d}_randoms_zmask_catalog.fit'):
+        obase = self._get_outbase_name()
+        if os.path.isfile(os.path.dirname(self.outBase) + f'/{obase}_run_{self.nside_split}_{pix:05d}_randoms_zmask_catalog.fit'):
             return None
         
         runRedmapperPixelTask = redmapper.pipeline.RunZmaskPixelTask(config, pix, self.nside_split, path = os.path.dirname(self.outBase))
@@ -1157,11 +1176,12 @@ class BaseRunner:
     @timeit
     def weight_randoms(self, config):
 
-        if os.path.isfile(os.path.dirname(self.outBase) + f'/my_roman_run_redmapper_v{rm_version}_weighted_randoms_z010-095_lgt020_vl02_area.fit'):
+        obase = self._get_outbase_name()
+        if os.path.isfile(os.path.dirname(self.outBase) + f'/{obase}_run_redmapper_v{rm_version}_weighted_randoms_z010-095_lgt020_vl02_area.fit'):
             print("FILES EXIST. SKIPPING...")
             return None
         
-        randfile = os.path.dirname(self.outBase) + f'/my_roman_run_redmapper_v{rm_version}_randoms_zmask_catalog.fit'
+        randfile = os.path.dirname(self.outBase) + f'/{obase}_run_redmapper_v{rm_version}_randoms_zmask_catalog.fit'
 
         config   = redmapper.Configuration(config)
         weigher  = redmapper.RandomWeigher(config, randfile)
@@ -1182,7 +1202,8 @@ class BaseRunner:
     @timeit
     def calibrate_redmagic(self):
 
-        if os.path.isfile(os.path.dirname(self.outBase) + '/redmagic/my_roman_run_redmagic_calib.fit'):
+        obase = self._get_outbase_name()
+        if os.path.isfile(os.path.dirname(self.outBase) + f'/redmagic/{obase}_run_redmagic_calib.fit'):
             print("File exists. Skipping....")
             return None
 
@@ -1196,7 +1217,7 @@ class BaseRunner:
         path = pathlib.Path(rmgc_config)
         data = yaml.safe_load(path.read_text())
         data["outpath"]  = os.path.dirname(self.outBase) + "/redmagic/"
-        data["catfile"]  = os.path.dirname(self.outBase) + f"/my_roman_run_redmapper_v{rm_version}_lgt20_vl02_catalog.fit"
+        data["catfile"]  = os.path.dirname(self.outBase) + f"/{obase}_run_redmapper_v{rm_version}_lgt20_vl02_catalog.fit"
         data["redmagic_constchis"]    = [8.0, 8.0]
         data["redmagic_use_constchi"] = True
         data["redmagic_etas"]   = [0.5, 1.0]
@@ -1213,8 +1234,8 @@ class BaseRunner:
             calib = redmapper.redmagic.RedmagicCalibrator(rmgc_config)
             calib.run(do_run = False)
         else:
-            shutil.copy(self.calib_dir + '/redmagic/my_roman_run_redmagic_calib.fit', 
-                        os.path.dirname(self.outBase) + '/redmagic/my_roman_run_redmagic_calib.fit')
+            shutil.copy(self.calib_dir + f'/redmagic/{obase}_run_redmagic_calib.fit', 
+                        os.path.dirname(self.outBase) + f'/redmagic/{obase}_run_redmagic_calib.fit')
             print("COPIED REDMAGIC CALIBRATION OVER FROM", self.calib_dir)
 
             shutil.copy(self.calib_dir + '/redmagic/run_default_run.yaml', 
@@ -1243,11 +1264,12 @@ class BaseRunner:
     def generate_redmagic(self):
 
         rmgc_config  = os.path.dirname(self.outBase) + '/redmagic/run_default_run.yaml'
+        obase        = self._get_outbase_name()
         
         #Rewrite lines in config
         path = pathlib.Path(rmgc_config)
         data = yaml.safe_load(path.read_text())
-        data["redmagicfile"]  = os.path.dirname(self.outBase) + '/redmagic/my_roman_run_redmagic_calib.fit'
+        data["redmagicfile"]  = os.path.dirname(self.outBase) + f'/redmagic/{obase}_run_redmagic_calib.fit'
         path.write_text(yaml.safe_dump(data, sort_keys=False))
         
         run_redmagic = redmapper.redmagic.RunRedmagicTask(rmgc_config)
