@@ -26,6 +26,7 @@ class DiffSkyRedMapper:
     def make_input_hdf5_with_flux_and_errs(
         self,
         make_specz_sample=True,
+        spec_sample_frac=0.05,
     ):
         """
         Create the final DiffSky cutout HDF5 file for Redmapper.
@@ -66,12 +67,9 @@ class DiffSkyRedMapper:
         if make_specz_sample:
             # Randomly select x% of total sample to be specz
             # Uniform over redshift range
-            frac = (
-                0.35  # Choose very high value so red-sequence calibration is successful
-            )
             # Uniformly sample redshift bins to ensure good coverage of redshift range
             nsample_per_bin = 500
-            nbins = int(np.ceil(frac * len(data) / nsample_per_bin))
+            nbins = int(np.ceil(spec_sample_frac * len(data) / nsample_per_bin))
             redshiftbin = np.linspace(0.0, data["z"].max(), nbins)
             bin_ids = np.digitize(z, redshiftbin)
             RandomSample = []
@@ -196,7 +194,7 @@ class DiffSkyRedMapper:
 if __name__ == "__main__":
     diffsky_rm = DiffSkyRedMapper(z_max=1.0, survey="lsst_roman")
 
-    diffsky_rm.make_input_hdf5_with_flux_and_errs(make_specz_sample=True)
+    diffsky_rm.make_input_hdf5_with_flux_and_errs(make_specz_sample=True, spec_sample_frac=0.35)
     diffsky_rm.make_masks()
 
     # diffsky_rm.test_e2e_cat()
