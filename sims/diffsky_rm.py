@@ -8,10 +8,9 @@ from astropy.table import Table
 
 
 class DiffSkyRedMapper:
-    def __init__(self, survey="lsst_roman", z_max=1.0):
-
-        self.data_dir = "/Users/cmpetha/Projects/ExternalData/Simulations/diffsky/e2e/"
-        self.input_fname = self.data_dir + "e2e_catalog_noshear.parquet"
+    def __init__(self, survey="lsst_roman", z_max=1.0, data_dir=None, input_fname="e2e_catalog_noshear.parquet"):
+        self.data_dir = os.path.expanduser(data_dir or os.environ.get("DIFFSKY_DATA_DIR", "."))
+        self.input_fname = os.path.join(self.data_dir, input_fname)
         self.survey = survey
         self.z_max = z_max
 
